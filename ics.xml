@@ -18,6 +18,11 @@
   <project name="CyanogenMod/android_device_samsung_crespo4g" path="device/samsung/crespo4g" remote="github" />
   <project name="CyanogenMod/android_device_samsung_p4wifi" path="device/samsung/p4wifi" remote="github" />
   <project name="CyanogenMod/android_device_samsung_p4tmo" path="device/samsung/p4tmo" remote="github" />
+  <project path="device/samsung/fascinatemtd" name="Stevespear426/android_device_samsung_fascinatemtd" revision="ics" />
+  <project path="device/samsung/captivatemtd" name="teamhacksung/android_device_samsung_captivatemtd" revision="ics" />
+  <project path="device/samsung/galaxysmtd" name="teamhacksung/android_device_samsung_galaxysmtd" revision="ics" />
+  <project path="device/samsung/vibrantmtd" name="teamhacksung/android_device_samsung_vibrantmtd" revision="master" />
+  <project path="device/samsung/aries-common" name="teamhacksung/android_device_samsung_aries-common" revision="ics" />
 
   <project name="CyanogenMod/android_device_semc_hallon" path="device/semc/hallon" remote="github" />
   <project name="CyanogenMod/android_device_semc_anzu" path="device/semc/anzu" remote="github" />
