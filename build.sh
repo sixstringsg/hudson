@@ -96,14 +96,6 @@ then
   . ~/.jenkins_profile
 fi
 
-cp $WORKSPACE/hudson/$REPO_BRANCH.xml .repo/local_manifest.xml
-
-echo Core Manifest:
-cat .repo/manifests/default.xml
-
-echo Local Manifest:
-cat .repo/local_manifest.xml
-
 echo Syncing...
 repo sync -d #> /dev/null 2> /tmp/jenkins-sync-errors.txt
 check_result "repo sync failed."
