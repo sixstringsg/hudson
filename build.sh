@@ -8,6 +8,12 @@ function check_result {
   fi
 }
 
+if [ -z "$HOME" ]
+then
+  echo HOME not in environment, guessing...
+  export HOME=$(awk -F: -v v="$USER" '{if ($1==v) print $6}' /etc/passwd)
+fi
+
 if [ -z "$WORKSPACE" ]
 then
   echo WORKSPACE not specified
@@ -38,6 +44,11 @@ then
   exit 1
 fi
 
+if [ -z "$SYNC_PROTO" ]
+then
+  SYNC_PROTO=http
+fi
+
 # colorization fix in Jenkins
 export CL_PFX="\"\033[34m\""
 export CL_INS="\"\033[32m\""
@@ -65,21 +76,18 @@ fi
 git config --global user.name $(whoami)@$NODE_NAME
 git config --global user.email jenkins@cyanogenmod.com
 
-if [ ! -d $REPO_BRANCH ]
+mkdir -p $REPO_BRANCH
+cd $REPO_BRANCH
+
+# always force a fresh repo init since we can build off different branches
+# and the "default" upstream branch can get stuck on whatever was init first.
+if [ -z "$CORE_BRANCH" ]
 then
-  mkdir $REPO_BRANCH
-  if [ ! -z "$BOOTSTRAP" -a -d "$BOOTSTRAP" ]
-  then
-    echo Bootstrapping repo with: $BOOTSTRAP
-    cp -R $BOOTSTRAP/.repo $REPO_BRANCH
-  fi
-  cd $REPO_BRANCH
-  repo init -u http://github.com/CyanogenMod/android.git -b $REPO_BRANCH
-else
-  cd $REPO_BRANCH
-  # temp hack for turl
-  repo init -u http://github.com/CyanogenMod/android.git -b $REPO_BRANCH
+  CORE_BRANCH=$REPO_BRANCH
 fi
+rm -rf .repo/manifests*
+repo init -u $SYNC_PROTO://github.com/CyanogenMod/android.git -b $CORE_BRANCH
+check_error "repo init failed."
 
 # make sure ccache is in PATH
 export PATH="$PATH:/opt/local/bin/:$PWD/prebuilt/$(uname|awk '{print tolower($0)}')-x86/ccache"
@@ -91,9 +99,15 @@ fi
 
 cp $WORKSPACE/hudson/$REPO_BRANCH.xml .repo/local_manifest.xml
 
+echo Core Manifest:
+cat .repo/manifests/default.xml
+
+echo Local Manifest:
+cat .repo/local_manifest.xml
+
 echo Syncing...
-repo sync -d > /dev/null 2> /dev/null
-check_result repo sync failed.
+repo sync -d #> /dev/null 2> /tmp/jenkins-sync-errors.txt
+check_result "repo sync failed."
 echo Sync complete.
 
 if [ -f $WORKSPACE/hudson/$REPO_BRANCH-setup.sh ]
@@ -103,7 +117,10 @@ fi
 
 . build/envsetup.sh
 lunch $LUNCH
-check_result lunch failed.
+check_result "lunch failed."
+
+# save manifest used for build (saving revisions as current HEAD)
+repo manifest -o $WORKSPACE/archive/manifest.xml -r
 
 rm -f $OUT/update*.zip*
 
@@ -125,14 +142,33 @@ then
   export CM_RELEASE=true
 fi
 
-if [ ! "$(ccache -s|grep -E 'max cache size'|awk '{print $4}')" = "5.0" ]
+if [ ! -z "$CM_EXTRAVERSION" ]
 then
-  ccache -M 5G
+  export CM_SNAPSHOT=true
+fi
+
+if [ ! -z "$GERRIT_CHANGES" ]
+then
+  export CM_SNAPSHOT=true
+  IS_HTTP=$(echo $GERRIT_CHANGES | grep http)
+  if [ -z "$IS_HTTP" ]
+  then
+    python $WORKSPACE/hudson/repopick.py $GERRIT_CHANGES
+    check_result "gerrit picks failed."
+  else
+    python $WORKSPACE/hudson/repopick.py $(curl $GERRIT_CHANGES)
+    check_result "gerrit picks failed."
+  fi
+fi
+
+if [ ! "$(ccache -s|grep -E 'max cache size'|awk '{print $4}')" = "50.0" ]
+then
+  ccache -M 50G
 fi
 
 make $CLEAN_TYPE
 mka bacon recoveryzip recoveryimage checkapi
-check_result Build failed.
+check_result "Build failed."
 
 cp $OUT/update*.zip* $WORKSPACE/archive
 if [ -f $OUT/utilties/update.zip ]
@@ -147,6 +183,10 @@ fi
 # archive the build.prop as well
 ZIP=$(ls $WORKSPACE/archive/update*.zip)
 unzip -c $ZIP system/build.prop > $WORKSPACE/archive/build.prop
+
+# CORE: save manifest used for build (saving revisions as current HEAD)
+rm -f .repo/local_manifest.xml
+repo manifest -o $WORKSPACE/archive/core.xml -r
 
 # chmod the files in case UMASK blocks permissions
 chmod -R ugo+r $WORKSPACE/archive
