@@ -54,12 +54,13 @@ export CL_PFX="\"\033[34m\""
 export CL_INS="\"\033[32m\""
 export CL_RST="\"\033[0m\""
 
-cd $WORKSPACE
+cd $WORKSPACE2
 rm -rf archive
 mkdir -p archive
 export BUILD_NO=$BUILD_NUMBER
 unset BUILD_NUMBER
 
+cd $WORKSPACE
 export PATH=~/bin:$PATH
 
 export USE_CCACHE=1
@@ -169,7 +170,7 @@ make $CLEAN_TYPE
 mka bacon recoveryzip recoveryimage checkapi
 check_result "Build failed."
 
-cp $OUT/update*.zip* $WORKSPACE/archive
+cp $OUT/update*.zip* $WORKSPACE2/archive
 if [ -f $OUT/utilties/update.zip ]
 then
   cp $OUT/utilties/update.zip $WORKSPACE/archive/recovery.zip
