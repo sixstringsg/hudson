@@ -74,9 +74,6 @@ then
   chmod a+x ~/bin/repo
 fi
 
-git config --global user.name $(whoami)@$NODE_NAME
-git config --global user.email jenkins@cyanogenmod.com
-
 mkdir -p $REPO_BRANCH
 cd $REPO_BRANCH
 
@@ -88,14 +85,6 @@ then
 fi
 rm -rf .repo/manifests*
 repo init -u $SYNC_PROTO://github.com/CyanogenMod/android.git -b $CORE_BRANCH
-
-# make sure ccache is in PATH
-export PATH="$PATH:/opt/local/bin/:$PWD/prebuilt/$(uname|awk '{print tolower($0)}')-x86/ccache"
-
-if [ -f ~/.jenkins_profile ]
-then
-  . ~/.jenkins_profile
-fi
 
 cp $WORKSPACE/hudson/$REPO_BRANCH.xml .repo/local_manifest.xml
 
@@ -118,11 +107,6 @@ fi
 . build/envsetup.sh
 lunch $LUNCH
 check_result "lunch failed."
-
-# save manifest used for build (saving revisions as current HEAD)
-repo manifest -o $WORKSPACE/archive/manifest.xml -r
-
-rm -f $OUT/update*.zip*
 
 UNAME=$(uname)
 
@@ -161,32 +145,11 @@ then
   fi
 fi
 
-if [ ! "$(ccache -s|grep -E 'max cache size'|awk '{print $4}')" = "50.0" ]
-then
-  ccache -M 50G
-fi
-
 make $CLEAN_TYPE
-mka bacon recoveryzip recoveryimage checkapi
+mka bacon | tee $LUNCH.log
 check_result "Build failed."
 
-cp $OUT/update*.zip* $WORKSPACE2/archive
-if [ -f $OUT/utilties/update.zip ]
-then
-  cp $OUT/utilties/update.zip $WORKSPACE/archive/recovery.zip
-fi
-if [ -f $OUT/recovery.img ]
-then
-  cp $OUT/recovery.img $WORKSPACE/archive
-fi
-
-# archive the build.prop as well
-ZIP=$(ls $WORKSPACE/archive/update*.zip)
-unzip -c $ZIP system/build.prop > $WORKSPACE/archive/build.prop
-
-# CORE: save manifest used for build (saving revisions as current HEAD)
-rm -f .repo/local_manifest.xml
-repo manifest -o $WORKSPACE/archive/core.xml -r
-
-# chmod the files in case UMASK blocks permissions
-chmod -R ugo+r $WORKSPACE/archive
+ZIP=$(tail -2 "$LUNCH".log | cut -f3 -d ' ' | cut -f1 -d ' ' | sed -e '/^$/ d')
+rm -rf $WORKSPACE2/archive
+mkdir $WORKSPACE2/archive
+cp out/target/product/$DEVICE/$ZIP $WORKSPACE2/archive
