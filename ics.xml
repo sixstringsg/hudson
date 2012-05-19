@@ -41,5 +41,9 @@
   <project name="CyanogenMod/android_device_samsung_galaxysmtd" path="device/samsung/galaxysmtd" revision="ics" />
   <project name="CyanogenMod/android_device_samsung_galaxysbmtd" path="device/samsung/galaxysbmtd" revision="ics" />
   <project name="CyanogenMod/android_device_samsung_vibrantmtd" path="device/samsung/vibrantmtd" revision="ics" />
+  
+  <project name="CyanogenMod/android_device_semc_zeus" path="device/semc/zeus" revision="ics" />
+  <project name="CyanogenMod/android_device_semc_msm7x30-common" path="device/semc/msm7x300-common" revision="ics" />
+  <project name="CyanogenMod/android_device_semc_zeus-common" path="device/semc/zeus-common" revision="ics" />
 
 </manifest>
